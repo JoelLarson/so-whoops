@@ -183,9 +183,11 @@ class StackOverflowPrettyPageHandlerDecorator extends Handler implements Handler
     {
         $generatedContent = '';
 
-        for ($i = 0; $i < 5; $i++) {
-            $generatedContent .= "<a href='{$answers[$i]->link}'>{$answers[$i]->title}</a>";
-            $generatedContent .= " <span>(" . implode(', ', $answers[$i]->tags) . ")</span>";
+        $limitedAnswers = array_slice($answers, 0, 5);
+
+        foreach($limitedAnswers as $answer) {
+            $generatedContent .= "<a href='{$answer->link}'>{$answer->title}</a>";
+            $generatedContent .= " <span>(" . implode(', ', $answer->tags) . ")</span>";
             $generatedContent .= "<br />";
         }
 

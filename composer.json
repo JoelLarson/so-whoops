@@ -1,0 +1,19 @@
+{
+    "name": "joellarson/so-whoops",
+    "require": {
+        "filp/whoops": "^2.0",
+        "guzzlehttp/guzzle": "~6.0",
+        "querypath/QueryPath": "^3.0"
+    },
+    "authors": [
+        {
+            "name": "Joel Larson",
+            "email": "joellarsonweb@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "SoWhoops\\": "src/"
+        }
+    }
+}

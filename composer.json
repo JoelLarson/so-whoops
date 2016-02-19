@@ -15,5 +15,8 @@
         "psr-4": {
             "SoWhoops\\": "src/"
         }
+    },
+    "scripts": {
+        "run-example": "php -S 127.0.0.1:8000 -t examples/"
     }
 }

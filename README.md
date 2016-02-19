@@ -14,3 +14,11 @@ $whoops->pushHandler(
 );
 $whoops->register();
 ```
+
+To test the example:
+
+```bash
+$ composer run-script run-example
+```
+
+Connect at: http://127.0.0.1:8000

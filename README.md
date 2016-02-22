@@ -3,6 +3,8 @@
 
 This is a prototype project for integrating stackoverflow with the `PrettyPageHandler` of Whoops!.
 
+![Preview](http://i.imgur.com/jQXrUgc.png)
+
 To use:
 
 ```php

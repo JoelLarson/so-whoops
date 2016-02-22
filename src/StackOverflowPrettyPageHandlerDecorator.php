@@ -46,8 +46,8 @@ class StackOverflowPrettyPageHandlerDecorator extends Handler implements Handler
 
             $exceptionMessage = $this->getException()->getMessage();
 
-            array_merge($answers, $this->getMostLikelyAnswers($exceptionMessage));
-            array_merge($answers, $this->getLessLikelyAnswers($exceptionMessage));
+            $answers = array_merge($answers, $this->getMostLikelyAnswers($exceptionMessage));
+            $answers = array_merge($answers, $this->getLessLikelyAnswers($exceptionMessage));
 
             $generatedContent = $this->generateHTMLForAnswers($answers);
 

@@ -1,0 +1,51 @@
+.answers {
+    padding: 0 40px;
+    margin-bottom: 40px;
+}
+
+.answers-heading {
+    color: #4288CE;
+    font-weight: 300;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+}
+
+.answer {
+    margin: 5px 0;
+}
+
+.answer .title {
+    font-size: 14px;
+    color: #303030;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.answer .title:hover {
+    color: hsl(0, 0%, 33%);
+}
+
+.answer .tags {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    display: inline-block;
+}
+
+.answer .tag {
+    display: inline-block;
+}
+
+.answer .tag-label {
+    padding: .25em .4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    color: #FFFFFF;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+    background: #4288CE;
+}

@@ -2,14 +2,13 @@
 
 namespace SoWhoops;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
 use Masterminds\HTML5;
 use Whoops\Exception\Inspector;
 use Whoops\Handler\Handler;
 use Whoops\Handler\HandlerInterface;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
+use Whoops\Util\TemplateHelper;
 
 /**
  * Class StackOverflowPrettyPageHandlerDecorator
@@ -23,12 +22,20 @@ class StackOverflowPrettyPageHandlerDecorator extends Handler implements Handler
     protected $prettyPageHandler;
 
     /**
+     * @var SearchAlgorithm[]
+     */
+    protected $searchAlgorithms;
+
+    /**
      * StackOverflowPrettyPageHandlerDecorator constructor.
      * @param PrettyPageHandler $prettyPageHandler
+     * @param SearchAlgorithm[] $searchAlgorithms
      */
-    public function __construct(PrettyPageHandler $prettyPageHandler)
+    public function __construct(PrettyPageHandler $prettyPageHandler, $searchAlgorithms = [])
     {
         $this->prettyPageHandler = $prettyPageHandler;
+
+        $this->setSearchAlgorithms($searchAlgorithms);
     }
 
     /**
@@ -41,23 +48,32 @@ class StackOverflowPrettyPageHandlerDecorator extends Handler implements Handler
         $handlerStatus = $this->prettyPageHandler->handle();
         $output = ob_get_clean();
 
-        if ($handlerStatus === Handler::QUIT) {
-            $answers = [];
-
-            $exceptionMessage = $this->getException()->getMessage();
-
-            $answers = array_merge($answers, $this->getMostLikelyAnswers($exceptionMessage));
-            $answers = array_merge($answers, $this->getLessLikelyAnswers($exceptionMessage));
-
-            $generatedContent = $this->generateHTMLForAnswers($answers);
-
-            $html5 = new HTML5();
-            $dom = $html5->loadHTML($output);
-            $w = qp($dom, '.details-container')->firstChild()->after("<div>{$generatedContent}</div>");
-            $w->writeHTML5();
+        if ($handlerStatus !== Handler::QUIT) {
+            return $handlerStatus;
         }
 
-        return $handlerStatus;
+        $answers = $this->getExceptionAnswers($this->getException());
+
+        $templateHelper = new TemplateHelper();
+
+        $soFile = __DIR__ . '/Resources/views/stackoverflow.html.php';
+
+        $templateHelper->setVariables([
+            'answers' => array_slice($answers, 0, 5)
+        ]);
+
+        ob_start();
+        $templateHelper->render($soFile);
+        $soOutput = ob_get_clean();
+
+        $html5 = new HTML5();
+        $dom = $html5->loadHTML($output);
+        $w = qp($dom, '.details-container')->firstChild()->after($soOutput)
+            ->top('html')->find('style')->append(file_get_contents(__DIR__ . '/Resources/css/stackoverflow.css'));
+
+        $w->writeHTML5();
+
+        return Handler::QUIT;
     }
 
     /**
@@ -103,94 +119,52 @@ class StackOverflowPrettyPageHandlerDecorator extends Handler implements Handler
     }
 
     /**
-     * @return mixed
-     */
-    private function getStackOverflowResponse($title)
-    {
-        $client = new Client();
-
-        $params = [
-            'order' => 'desc',
-            'sort' => 'activity',
-            'tagged' => 'php',
-            'intitle' => $title,
-            'site' => 'stackoverflow'
-        ];
-
-        $url = 'https://api.stackexchange.com/2.2/search?' . http_build_query($params);
-
-        $request = new Request('GET', $url);
-
-        $response = $client->send($request);
-
-        $decodedResponse = json_decode((string)$response->getBody());
-
-        return $decodedResponse;
-    }
-
-    /**
-     * @param $exceptionMessage
+     * @param $e
      * @return array
      */
-    private function getMostLikelyAnswers($exceptionMessage)
+    private function getExceptionAnswers($e)
     {
-        $decodedResponse = $this->getStackOverflowResponse($exceptionMessage);
-
         $answers = [];
 
-        foreach ((array) $decodedResponse->items as $item) {
-            $answers[] = (object)[
-                'title' => $item->title,
-                'link' => $item->link,
-                'tags' => $item->tags,
-                'is_answered' => $item->is_answered
-            ];
+        /** @var SearchAlgorithm[] $searchAlgorithms */
+        $searchAlgorithms = $this->getSearchAlgorithms();
+
+        foreach ($searchAlgorithms as $algorithm) {
+            if (!$algorithm->isValid($answers)) {
+                continue;
+            }
+
+            $answers = array_merge($answers, $algorithm->getAnswers($e));
         }
 
         return $answers;
     }
 
     /**
-     * @param $exceptionMessage
-     * @return array
+     * @return SearchAlgorithm[]
      */
-    private function getLessLikelyAnswers($exceptionMessage)
+    private function getSearchAlgorithms()
     {
-        // No items, do more generic search.
-        $exceptionParts = explode(':', (string)$exceptionMessage);
-
-        $decodedResponse = $this->getStackOverflowResponse($exceptionParts[0]);
-
-        $answers = [];
-
-        foreach ((array) $decodedResponse->items as $item) {
-            $answers[] = (object)[
-                'title' => $item->title,
-                'link' => $item->link,
-                'tags' => $item->tags,
-                'is_answered' => $item->is_answered
-            ];
-        }
-
-        return $answers;
+        return $this->searchAlgorithms;
     }
 
     /**
-     * @param $answers
-     * @return string
+     * @param $searchAlgorithms
      */
-    private function generateHTMLForAnswers($answers)
+    private function setSearchAlgorithms($searchAlgorithms)
     {
-        $generatedContent = '';
+        $this->searchAlgorithms = [];
 
-        $limitedAnswers = array_slice($answers, 0, 5);
-
-        foreach($limitedAnswers as $answer) {
-            $generatedContent .= "<a href='{$answer->link}'>{$answer->title}</a>";
-            $generatedContent .= " <span>(" . implode(', ', $answer->tags) . ")</span>";
-            $generatedContent .= "<br />";
+        foreach($searchAlgorithms as $algorithm) {
+            $this->addSearchAlgorithm($algorithm);
         }
+    }
 
-        return $generatedContent;
+    /**
+     * @param $algorithm
+     */
+    private function addSearchAlgorithm(SearchAlgorithm $algorithm)
+    {
+        $this->searchAlgorithms[] = $algorithm;
     }
 }
